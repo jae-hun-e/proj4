@@ -88,6 +88,7 @@ int pthread_pool_init(pthread_pool_t *pool, size_t bee_size, size_t queue_size)
 int pthread_pool_submit(pthread_pool_t *pool, void (*f)(void *p), void *p, int flag)
 {
     // 여기를 완성하세요
+    // 공유자원(q)에 못들어 가게 lock검
     pthread_mutex_lock(&pool->mutex);
     if (!pool->running) {
         pthread_mutex_unlock(&pool->mutex);
@@ -128,36 +129,17 @@ int pthread_pool_submit(pthread_pool_t *pool, void (*f)(void *p), void *p, int f
  */
 int pthread_pool_shutdown(pthread_pool_t *pool)
 {
-//    if (pool == NULL) return POOL_SUCCESS;
-//    pthread_mutex_lock(&pool->mutex);
+    // 실행중인 스레드 종료
     pool->running = false;
 
-    // 큐 할당 제거하기
-//    pool->q_len = 0;
-
-    // Thread 종료까지 대기 하기
-//    while(pool->bee_size > 0) {
-//        int cur_size = pool->bee_size;
-//        pthread_cond_broadcast(&pool->empty);
-//        pthread_mutex_unlock(&pool->mutex);
-//        for(int i = 0; i < cur_size; i++) {
-//            if (pthread_join(pool->bee[i], NULL) != 0) {
-//                return POOL_FAIL;
-//            }
-//        }
-//        pthread_mutex_lock(&pool->mutex);
-//    }
-
+    // 모든 스레드 exit(0)
     pthread_cond_broadcast(&pool->empty);
     pthread_cond_broadcast(&pool->full);
     for (int i = 0 ; i < pool->bee_size; i++) {
+        // 메모리 반납
         pthread_join(pool->bee[i], NULL);
     }
-//    pthread_mutex_unlock(&pool->mutex);
-
-//    pthread_cond_destroy(&pool->full);
-//    pthread_cond_destroy(&pool->empty);
-//    pthread_mutex_destroy(&pool->mutex);
+    // 자원 반납
     free(pool->bee);
     free(pool->q);
     return POOL_SUCCESS;
